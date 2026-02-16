@@ -4,6 +4,7 @@ import pygetwindow as gw
 import time
 import logging
 import pyperclip
+import random
 
 pyautogui.FAILSAFE = True
 
@@ -19,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 CONFIG = {
     'name_file': 'name.txt',
+    'template_file': 'text.txt',
+    'word_file': 'word.txt',
     'preparation_time': 10,
     'search_delay': 1.5,
     'select_contact_delay': 2.5,
@@ -40,6 +43,34 @@ def read_names(file_path):
         raise
     except Exception as e:
         logger.error('读取文件失败: %s', e)
+        raise
+
+
+def read_template(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            template = f.read()
+        logger.info('成功读取祝福语模板')
+        return template
+    except FileNotFoundError:
+        logger.error('文件 %s 不存在', file_path)
+        raise
+    except Exception as e:
+        logger.error('读取模板文件失败: %s', e)
+        raise
+
+
+def read_words(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            words = [line.strip() for line in f if line.strip()]
+        logger.info('成功读取 %d 条祝福附加句', len(words))
+        return words
+    except FileNotFoundError:
+        logger.error('文件 %s 不存在', file_path)
+        raise
+    except Exception as e:
+        logger.error('读取祝福附加句文件失败: %s', e)
         raise
 
 
@@ -101,9 +132,10 @@ def click_input_box():
     return False
 
 
-def send_blessing(name):
+def send_blessing(name, template, words):
     try:
-        message = 'Python脚本测试：新年快乐，' + name + '！'
+        selected_word = random.choice(words)
+        message = template.replace('{name}', name).replace('{word}', selected_word)
         pyperclip.copy(message)
         time.sleep(0.3)
         
@@ -123,6 +155,8 @@ def send_blessing(name):
 def main():
     try:
         names = read_names(CONFIG['name_file'])
+        template = read_template(CONFIG['template_file'])
+        words = read_words(CONFIG['word_file'])
         
         logger.info('程序将在 %d 秒后开始，请切换到微信界面', CONFIG['preparation_time'])
         for i in range(CONFIG['preparation_time'], 0, -1):
@@ -140,7 +174,7 @@ def main():
             logger.info('正在给 %s 发送祝福', name)
             
             if search_contact(name):
-                if send_blessing(name):
+                if send_blessing(name, template, words):
                     success_count += 1
                 else:
                     fail_count += 1
